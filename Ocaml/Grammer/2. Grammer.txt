@@ -1,0 +1,29 @@
+
+
+(* Syntax vs Semantics *)
+- Syntax if about form and semantics about meaning
+
+We have two kinds of semantics: static and dynamic
+
+
+(* Semantics: Static vs Dynamic *)
+Static
+- Set of rules to the syntactic structure. Ex. typing information, well-formedness of commands
+- Usually enforced statically (before execution)
+
+Dynamic
+- Set of rules to how syntactic objects need to be executed. Ex. expression evaluation, commands execution
+- How the program must be executed at runtime
+
+
+(* Stntactic Structure of Programming Languages *)
+1. The scanning phase collects characters into tokens (words)
+2. Parsing phase (syntatic analyzer) determines the validity of grammer sentences
+
+
+(* Formal language : BNF (Backus Normal/Naur Form) or Context-free grammars *)
+
+ BNF grammar is defined by a set of terminals (tokens), a set of nonterminals, an initial nonterminal symbol, 
+ and a finite nonempty set of rules
+
+

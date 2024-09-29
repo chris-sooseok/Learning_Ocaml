@@ -1,0 +1,31 @@
+
+
+(* Interpretation and Compilation *)
+
+Interpreter itself is a program that accepts a source program and any input to the sourc program and
+runs it immediately to produce the output
+
+Compilation itself is a program that translates a source program from an high-level language into a low-level language
+Compiler translates source program to target program (equivalent program) that is executable on the target archiecture
+This target program is an executable program that takes an input and returns an output
+
+
+(* Details on Interpretation *)
+Character stream -> (Scanner - Lexical analysis) -> Token stream -> (Parser - Syntax analysis) -> Parse tree ->
+(Semantic analysis and intermediate code generation) -> Abstract syntax tree or other intermediate form -> (Tree-walk routines)
+
+Then, Tree-walk routines takes program input and returns program output
+
+- Scanner : read vocabulary
+- Parser : takes token and make sure they are arranged correctly (grammar)
+- Interpreter can immediately run after all processes
+
+
+(* Details on Compilation *)
+Character stream -> (Scanner - Lexical analysis) -> Token stream -> (Parser - Syntax analysis) -> Parse tree ->
+(Semantic analysis and intermediate code generation) -> Abstract syntax tree or other intermediate form -> (Machine-independent code improvement - option) -> Modified intermediate form -> (Target code generation) -> Target language (e.g assembler) -> (Machine-specific code improvement - optional) -> Modified target language
+
+
+(* Virtual machine - Mixing compilation and Interpretation *)
+Java advantage - write once and run everywhere
+- generate byte code when compiling Java program, thus, have to do less work in virtual machine since the compilar validates well
