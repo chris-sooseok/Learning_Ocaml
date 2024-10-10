@@ -1,0 +1,3 @@
+let interpreter ((input : string), (output : string )) : unit = ...
+
+- input : read string data (lines of commands) and sort them into a list

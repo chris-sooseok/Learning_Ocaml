@@ -1,29 +1,135 @@
 
-
 (* Syntax vs Semantics *)
-- Syntax if about form and semantics about meaning
+- Syntax is about form and semantics about meaning
+An example of syntax error would be missing :, =, and ->, etc.
+An example of semantic error would be adding an integer with a float, etc.
 
 We have two kinds of semantics: static and dynamic
 
 
+
 (* Semantics: Static vs Dynamic *)
 Static
-- Set of rules to the syntactic structure. Ex. typing information, well-formedness of commands
+- Set of rules to the syntactic structure. Ex. type checks, well-formedness of commands
 - Usually enforced statically (before execution)
 
+
 Dynamic
-- Set of rules to how syntactic objects need to be executed. Ex. expression evaluation, commands execution
+- Set of rules to how syntactic objects need to be executed. Ex. expression evaluation (int + str), commands execution
 - How the program must be executed at runtime
 
 
-(* Stntactic Structure of Programming Languages *)
-1. The scanning phase collects characters into tokens (words)
-2. Parsing phase (syntatic analyzer) determines the validity of grammer sentences
 
 
-(* Formal language : BNF (Backus Normal/Naur Form) or Context-free grammars *)
+(* Syntactic Structure of Programming Languages *)
+1. The scanning phase (Lexical analysis) collects characters into tokens (words)
+2. Parsing phase (syntatic analysis) determines the validity of grammer sentences (parse trees)
 
- BNF grammar is defined by a set of terminals (tokens), a set of nonterminals, an initial nonterminal symbol, 
- and a finite nonempty set of rules
+- Lexial phase will check validity of each word
+- Parcer will determine if the sentence makes sence in a complete sentential form
 
 
+
+
+(* Formal grammar : BNF (Backus Normal/Naur Form) or Context-free language *)
+A formal grammar is a formal description of the sentiential-forms that are part of the language
+
+The formal grammer we will look up here are BNF or Context-free Grammar 
+BNF grammar is defined by a set of terminals (tokens), a set of nonterminals, an initial nonterminal symbol,
+and a finite nonempty set of rules (| and =:: signs)
+
+- Nonterminal symbols : classes of syntactic structures, act like variables that can be replaced
+- Terminal symbols : specific syntactic elements (token) of the lanauge, act like values
+
+(* Derivations *)
+Once we have a set of grammar defined for an initial nonterminal symbol, we performs derivation to form a complete sentence.
+A derivation is a repeated application of rules by breaking down non-terminals given by the initial nonterminal symbol into a complete sentence form
+Without specific rules, derivation of a set of grammar will cause ambiguity that derives unreliable and incorrect of program execution
+
+(* Generator vs Recognizer *)
+Generator : startring from an initial nonterminal symbol, break down to a sentential form with terminals
+Recognizer : starting from a terminal sentence, break down them into nonterminal symbolw that eventually will lead to an initial nonterminal symbol
+
+(* Parse Tree*)
+A derivation of a set of grammar can be depicted as a parse tree which then represents the order of the execution of the given sentence
+In other words, Lexical and Parse phase produces a parse tree that is to be used to traverse through to execute
+
+Parse tree executes from the lowest to higher. Then, by designing careful set of grammar we can determine precedence
+and associativity within a parse tree of derivation by enforce more strictness into the grammar.
+
+
+
+
+(* Dealing with associativity such as 1 + 2 + 3 + 4 + 5 *)
+<expr> ::= <expr><op><expr> 
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<op> ::= +
+
+<expr> ::= <const><op><const> | <expr><op><const>
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<op> ::= +
+
+The intuition here is that we enforce any associativity computation to occur on the lefthand side of the parse tree
+
+
+(* Dealing with precedence such as 1 + 2 * 3 *)
+<expr> ::= <expr><op><expr> 
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<op> ::= + | *
+
+<expr> ::= <expr> <addop> <term> | <term>
+<term> ::= <term> <mulop> <term> | <const>
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<addop> ::= +
+<mulop> ::= *
+
+The intuition here is that once you define nonterminal term you can never go back to addition expression,
+thus, forcing only multiplication by isolating multipication from addition
+Since term only can be derived by expression, any multiplication computation be placed lower than addition.
+
+However, here we could replace one term with cons in mulop operation to enforce any additional multiplication to branch 
+down to left or right
+
+(* Dealing with additional precedence (1+2) * 3 *)
+<expr> ::= <expr> <addop> <term> | <term>
+<term> ::= <term> <mulop> <term> | <const>
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<addop> ::= +
+<mulop> ::= *
+
+<expr> ::= <expr> <addop> <term> | <term>
+<term> ::= <term> <mulop> <factor> | <factor>
+<factor> ::= <const> | ( <expr> )
+<const> ::= 1|2|3|4|5|6|7|8|9|0
+<addop> ::= +
+<mulop> ::= *
+
+The intuition here is that we want to place the () lower than addop and mulop operations
+Thus, we implement a factor nonterminal and place the () there
+
+
+--------------------- include conditional? 
+
+
+(* [] = option , () = alternative, {} = repetition *)
+
+<proc_call> ::= ident [(<expr_list>)]
+is equivalent to
+<proc_call> ::= ident (expr_list) | ident
+
+<expr> ::= <term> {(+ | -) <term>}
+is equivalent to
+<expr> ::= <expr> + <term> | <expr> - <term> | <term>
+
+The notion here is that <term> is being the element to be repetitive. Then, <expr> can also be expressed as <term>, which
+satifies the condition to include <term> in {} as a repeitive element. The repetition element in {}
+can be 0 repetition or more. Thus, replacing <expr> with <term> and articulating the repetitive element in {}
+
+
+
+
+
+Until this point, it was about syntax which concerns structures of programs through formal grammar
+
+Dynamic semantics specify meaning of programs, not just structure.
+Rather than static, dynamic semantics gives the full meaning of the program
