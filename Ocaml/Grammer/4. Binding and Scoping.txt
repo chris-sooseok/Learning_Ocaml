@@ -1,0 +1,21 @@
+(* Binding and Scoping rules *) - Operational semantics for arithmetical expressions
+
+Operational semantics configuration from previous example was in the shape of (p, s)
+But, now the configuration for arithmetical expressions are (e, m)
+
+Within arithemetical expressions of operational semantics, we can use hyphothesis to simplify expressions
+
+(e,m) -> (e1, m)
+(-----------------------------)
+(e add v2, m) -> (e1 and v2, m)
+
+(3 add 5, ()) -> (8, ())
+(-------------------------------------------------)
+(3 add 5 minus 6, ()) -> (8 minus 6, ()) -> (2, ())
+
+How this configuration could be configured is that we can use hyphothesis to reason about the reduction.
+
+(* Variables *)
+
+
+

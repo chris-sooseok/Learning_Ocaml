@@ -1,0 +1,48 @@
+
+
+
+(* Statements vs Expressions *)
+
+Imperative code uses statements
+- The code is based on statemetns that change the program state by telling the computer how to do things
+In other words, the code is based on defining variables and changing values of those variables
+
+Declarative code uses expressions
+- The code is based on expressions that evaluate their result based on input and output the result
+
+(* Overall exaplanations *)
+Statements don't necessarily need any input or output; they an just call other functions or change some value somewhere outside of their internal state
+
+Expressions focus on taking input and providing output while relying only on the input itself. This is called a pure function
+
+(* Programming paradigms and programming languages *)
+Some programming languages are suited on one type of paradigm while others can be suited to more than one.
+
+JavaScript allows us to write code in different paradigms or combine them into a multiparadigmatic approach
+
+However, HTML is a declarative language. All of the instructions you provide when you use it follow that paradigm.
+You are telling the computer what you want to see, but you leave it to the deployment package to determine how it processes that.
+This makes HTML ideal for automation.
+
+(* State management *)
+let state = { foreground: ‘#999999’, background: ‘#FFFFFF’ };
+
+- imperative funtion
+const imperativeMakeBackgroundBlack = () => { state.background = ‘#000000’; };
+
+- declarative function
+const declarativeMakeBackgroundBlack = state => ({…state, background: ‘#000000’});
+
+Imperative code directly accesses the state and changes it, whereas declarative experessions never change the external state
+
+Imperative code can be challenging with growing complexity. You may have many parts of the code toucing the same state and
+when your system starts having trouble it may be quite difficult to debug.
+
+
+In declarative code, you focus on building a function composition that takes several small functions and strings them together
+so one function sequentially passes its output as an input to the next function in line.
+
+
+https://medium.com/@vincentbacalso/imperative-vs-declarative-programming-f886d3b65595
+https://www.ilearnengineering.com/computer/what-is-a-programming-paradigm-and-what-types-are-there
+https://www.ilearnengineering.com/computer/understanding-imperative-and-declarative-programming

@@ -1,0 +1,35 @@
+
+(* Dynamic Semantics *)
+
+(* Regular and context free grammars *)
+Scanner (lexical analysis) -> Parser (syntax analysis)
+
+(* Static semantics attributed grammar *)
+Semantic analysis and intermediate code generation
+
+Again, emphasis on syntax is about form and semantics about meaning
+Then, semantics are divided into static and dynamic
+
+(* Static semantics *)
+What interpreter doesn't do, but many do. 
+Reasoning about whether the code is well formed. This is not covered in this course.
+e.x. double-checking type before runtime (Ocaml does this). 
+However, we do this for our interpreter during runtime which will be handled during dynamic semantics
+e.x2 well-formedness of commands
+Thus, static semantics add some notions of meaning prior to exeuction of program
+
+(* Dynamic semantics *)
+Tree-walk routines (actual executions)
+
+This is what the interpreter project is maninly about.
+During tree-walk rountines, we basically exeucte commands in the list.
+
+
+Why do we need to specify dynamic semantics?
+- Programmers need to know what statements and commands mean
+- Compiler writers must know exactly what language constructs do
+- Correctness proofs with respect to the specifications
+- Designers need to detect ambiguities and inconsistencies (done through input/ouput test cases)
+
+We will learn about how to specify dynamic semantics
+

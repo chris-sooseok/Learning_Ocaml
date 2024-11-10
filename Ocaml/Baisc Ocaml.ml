@@ -110,16 +110,15 @@ let rec map (f: 'a -> 'b) (xs: 'a list) : 'b list =
 
 
 (* Here for the f argument, we define a function, such as a + b *)
-(*('a -> 'b -> 'b ) is the type of a defined function*)
 let rec fold_left f acc xs =
   match xs with
   | [] -> acc
   | hd :: tl -> fold_left f (f acc hd) tl
 
-  
+(*('a -> 'b -> 'b ) is the type of a defined function*)
 let rec fold_right f xs acc =
-  match xs with
-  | [] -> acc
+  match xs with     
+  | [] -> acc     
   | hd::tl -> f hd (fold_right f tl acc)
 
 

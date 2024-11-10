@@ -83,11 +83,11 @@ The intuition here is that we enforce any associativity computation to occur on 
 <addop> ::= +
 <mulop> ::= *
 
-The intuition here is that once you define nonterminal term you can never go back to addition expression,
-thus, forcing only multiplication by isolating multipication from addition
-Since term only can be derived by expression, any multiplication computation be placed lower than addition.
+The intuition here is that once you define nonterminal <term> you can never go back to <expr>,
+thus, forcing only <mulop> to be executable by isolating <mulop> from <addop>
+Since <term> only can be derived by <expr>, any <mulop> computation be placed lower than <addop>.
 
-However, here we could replace one term with cons in mulop operation to enforce any additional multiplication to branch 
+However, here we could replace one <term> with <const> in <mulop> operation to enforce any additional multiplication to branch 
 down to left or right
 
 (* Dealing with additional precedence (1+2) * 3 *)
@@ -104,13 +104,14 @@ down to left or right
 <addop> ::= +
 <mulop> ::= *
 
-The intuition here is that we want to place the () lower than addop and mulop operations
-Thus, we implement a factor nonterminal and place the () there
+The intuition here is that we want to place the () lower than <addop> and <mulop> operations
+Thus, we implement a <factor> nonterminal and place the () there
 
 
 --------------------- include conditional? 
 
 
+(* Extended BNF (EBNF) *)
 (* [] = option , () = alternative, {} = repetition *)
 
 <proc_call> ::= ident [(<expr_list>)]
@@ -126,10 +127,7 @@ satifies the condition to include <term> in {} as a repeitive element. The repet
 can be 0 repetition or more. Thus, replacing <expr> with <term> and articulating the repetitive element in {}
 
 
-
-
-
-Until this point, it was about syntax which concerns structures of programs through formal grammar
+------------------ Until this point, it was about syntax which concerns structures of programs through formal grammar -----------------
 
 Dynamic semantics specify meaning of programs, not just structure.
-Rather than static, dynamic semantics gives the full meaning of the program
+Rather than static, dynamic semantics gives the full meaning of the program.

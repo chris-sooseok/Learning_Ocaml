@@ -1,8 +1,10 @@
 
 
+
+
 (* Interpretation and Compilation *)
 
-Interpreter itself is a program that accepts a source program and any input to the sourc program and
+Interpreter itself is a program that accepts a source program and any input to the source program and
 runs it immediately to produce the output
 
 Compilation itself is a program that translates a source program from an high-level language into a low-level language
@@ -10,20 +12,32 @@ Compiler translates source program to target program (equivalent program) that i
 This target program is an executable program that takes an input and returns an output
 
 
+
+
 (* Details on Interpretation *)
 Character stream -> (Scanner - Lexical analysis) -> Token stream -> (Parser - Syntax analysis) -> Parse tree ->
 (Semantic analysis and intermediate code generation) -> Abstract syntax tree or other intermediate form -> (Tree-walk routines)
 
+(Scanner and Parser are regular and context free grammers)
+(static semantics attribute grammer)
+
+
 Then, Tree-walk routines takes program input and returns program output
+- This means tree-walk is dynamic semantics, which is equivalent to the interpreter project
 
 - Scanner : read vocabulary
 - Parser : takes token and make sure they are arranged correctly (grammar)
 - Interpreter can immediately run after all processes
 
 
+
+
 (* Details on Compilation *)
 Character stream -> (Scanner - Lexical analysis) -> Token stream -> (Parser - Syntax analysis) -> Parse tree ->
 (Semantic analysis and intermediate code generation) -> Abstract syntax tree or other intermediate form -> (Machine-independent code improvement - option) -> Modified intermediate form -> (Target code generation) -> Target language (e.g assembler) -> (Machine-specific code improvement - optional) -> Modified target language
+
+
+
 
 
 (* Virtual machine - Mixing compilation and Interpretation *)
