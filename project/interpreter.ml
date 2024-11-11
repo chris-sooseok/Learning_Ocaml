@@ -5,7 +5,7 @@ type stackValue = STRING of string | INT of int | BOOL of bool
 
 (* ------------------------- doesn't matter if the types are all capitalized? *)
 type command = ADD | SUB | MUL | DIV | REM | NEG | PUSH of stackValue | POP
-| SWAP | ToString | Println | QUIT
+| SWAP | ToString | Println | QUIT | CAT | AND | OR | NOT | EQUAL | LESSTHAN | BIND
 
 
 let interpreter ((input : string), (output : string )) : unit = 
@@ -111,21 +111,21 @@ match (sv_cmd_li, stack) with
 | (POP :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* the code for pushing elements back wouldn't be necessary since we not  *)
 (* error cases for add : invalid type, one element, empty list*)
-| (ADD :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (x+y) :: st_tl)
+| (ADD :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (y+x) :: st_tl)
 | (ADD :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for sub : invalid type, one element, empty list *)
 | (SUB :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (y-x) :: st_tl)
 | (SUB :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for sub : empty list, one element, invalid type *)
-| (MUL :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (x*y) :: st_tl)
+| (MUL :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (y*x) :: st_tl)
 | (MUL :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for sub : division by 0, empty list, one element, invalid type*)
 | (DIV :: cm_tl, INT(0) :: INT(x) :: st_tl) -> processor cm_tl (ERROR :: INT(0) :: INT(x) :: st_tl)
-| (DIV :: cm_tl, INT(y) :: INT(x) :: st_tl) -> processor cm_tl (INT(x/y) :: st_tl)
+| (DIV :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT(y/x) :: st_tl)
 | (DIV :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for rem : mod by 0, empty list, one element, invalid type*)
-| (REM :: cm_tl, INT(0) :: INT(x) :: st_tl) -> processor cm_tl (ERROR :: INT(0) :: INT(x) :: st_tl)
-| (REM :: cm_tl, INT(y) :: INT(x) :: st_tl) -> processor cm_tl (INT(x mod y) :: st_tl)
+| (REM :: cm_tl, INT(x) :: INT(0) :: st_tl) -> processor cm_tl (ERROR :: INT(x) :: INT(0) :: st_tl)
+| (REM :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT(y mod x) :: st_tl)
 | (REM :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 | (NEG :: cm_tl, INT(x) :: st_tl) -> processor cm_tl (INT(-x) :: st_tl)
 | (NEG :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
@@ -139,6 +139,44 @@ match (sv_cmd_li, stack) with
 | (ToString :: cm_tl, STRING(x) :: st_tl) -> processor cm_tl ( quotation_filter x :: st_tl)
 | (ToString :: cm_tl, NAME(x) :: st_tl) -> processor cm_tl (STRING(x) :: st_tl)
 | (Println :: cm_tl, STRING(x) :: st_tl) -> write_to_file x processor cm_tl st_tl
+| (CAT :: cm_tl, STRING(x) :: STRING(y) :: st_tl) -> processor cm_tl (STRING(y^x) :: st_tl)
+| (CAT :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+| (AND :: cm_tl, BOOL(x) :: BOOL(y) :: st_tl) -> processor cm_tl (BOOL(y && x) :: st_tl)
+| (AND :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+| (OR :: cm_tl, BOOL(x) :: BOOL(y) :: st_tl) -> processor cm_tl (BOOL(y || x) :: st_tl)
+| (OR :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+| (NOT :: cm_tl, BOOL(x) :: st_tl) -> processor cm_tl (BOOL(not x) :: st_tl)
+| (NOT :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+| (EQUAL :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (BOOL(y == x) :: st_tl)
+| (EQUAL :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+| (LESSTHAN :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (BOOL(y < x) :: st_tl)
+| (LESSTHAN :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
+
+(* error when 1. bind an identifier to an unbound identifier 2. if stack is empty *)
+(* how about an identifer which its key already exists and pusing another identifer that has the same key*)
+| (BIND :: cm_tl, INT(v) :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+| (BIND :: cm_tl, STRING(v) :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+| (BIND :: cm_tl, BOOL(v) :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+| (BIND :: cm_tl, UNIT :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+| (BIND :: cm_tl, NAME(v) :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+| (BIND :: cm_tl, st_tl) -> processor cm_tl (ERROR :: st_tl)
+| (BIND :: cm_tl, NAME(v) :: NAME(k) :: st_tl) -> processor cm_tl (UNIT :: st_tl)
+
+| (ADD :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (INT(y+x) :: st_tl)
+| (SUB :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (INT(y-x) :: st_tl)
+
+| (MUL :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (INT(y*x) :: st_tl)
+
+| (DIV :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (INT(y/x) :: st_tl)
+
+| (REM :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (INT(y mod x) :: st_tl)
+
+| (NEG :: cm_tl, NAME(x) :: st_tl) -> processor cm_tl (INT(-x) :: st_tl)
+
+| (SWAP :: cm_tl, NAME(x) :: NAME(y) :: st_tl) -> processor cm_tl (NAME(y) :: NAME(x) :: st_tl)
+
+| (ToString :: cm_tl, NAME(x) :: st_tl) -> processor cm_tl (STRING(x) :: st_tl)
+
 (*| ([], _) -> processor sv_cmd_li (ERROR :: stack) *)
 (* | _ -> processor sv_cmd_li (ERROR :: stack) *)
 | ([], _) -> ()

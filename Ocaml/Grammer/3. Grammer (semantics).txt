@@ -10,7 +10,7 @@ Semantic analysis and intermediate code generation
 Again, emphasis on syntax is about form and semantics about meaning
 Then, semantics are divided into static and dynamic
 
-(* Static semantics *)
+(* Static semantics *) - something that context free grammars cannot do
 What interpreter doesn't do, but many do. 
 Reasoning about whether the code is well formed. This is not covered in this course.
 e.x. double-checking type before runtime (Ocaml does this). 
@@ -32,4 +32,16 @@ Why do we need to specify dynamic semantics?
 - Designers need to detect ambiguities and inconsistencies (done through input/ouput test cases)
 
 We will learn about how to specify dynamic semantics
+
+(* Formal semantics *)
+Denotational Semantics
+- A program described by a mathematical function (more abstract formalism)
+Operational Semantics
+- A program described by the sequence of transformations (more intuitive formalism)
+
+Operational Semantics are expressed through configuration description.
+Configuration description is specified by multiple rules.
+Then, we can add hyphothesis to some rules, which are the rules are that only executed when the hyphothesis
+is satisfied. 
+
 
