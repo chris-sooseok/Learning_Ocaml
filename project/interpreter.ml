@@ -94,7 +94,7 @@ let quotation_filter str = STRING (String.sub str 1 (String.length str - 2))
   
 in
 
-let rec processor (sv_cmd_li: command list) (stack : stackValue list) : unit =
+let rec processor (sv_cmd_li: command list) (stack : stackValue list) (m : stackValue) : unit =
 match (sv_cmd_li, stack) with
 | (QUIT :: cm_tl, stack) -> ()
 (* whether int is positive or negative, done through this line *)
@@ -120,11 +120,11 @@ match (sv_cmd_li, stack) with
 | (MUL :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT (y*x) :: st_tl)
 | (MUL :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for sub : division by 0, empty list, one element, invalid type*)
-| (DIV :: cm_tl, INT(0) :: INT(x) :: st_tl) -> processor cm_tl (ERROR :: INT(0) :: INT(x) :: st_tl)
+| (DIV :: cm_tl, INT(0) :: INT(x) :: st_tl) -> processor cm_tl (ERROR :: stack)
 | (DIV :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT(y/x) :: st_tl)
 | (DIV :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 (* error cases for rem : mod by 0, empty list, one element, invalid type*)
-| (REM :: cm_tl, INT(x) :: INT(0) :: st_tl) -> processor cm_tl (ERROR :: INT(x) :: INT(0) :: st_tl)
+| (REM :: cm_tl, INT(x) :: INT(0) :: st_tl) -> processor cm_tl (ERROR :: stack)
 | (REM :: cm_tl, INT(x) :: INT(y) :: st_tl) -> processor cm_tl (INT(y mod x) :: st_tl)
 | (REM :: cm_tl, stack) -> processor cm_tl (ERROR :: stack)
 | (NEG :: cm_tl, INT(x) :: st_tl) -> processor cm_tl (INT(-x) :: st_tl)
@@ -136,7 +136,7 @@ match (sv_cmd_li, stack) with
 | (ToString :: cm_tl, BOOL(false) :: st_tl) -> processor cm_tl (STRING(":false:") :: st_tl)
 | (ToString :: cm_tl, ERROR :: st_tl) -> processor cm_tl (STRING(":error:") :: st_tl)
 | (ToString :: cm_tl, UNIT :: st_tl) -> processor cm_tl (STRING(":unit:") :: st_tl)
-| (ToString :: cm_tl, STRING(x) :: st_tl) -> processor cm_tl ( quotation_filter x :: st_tl)
+| (ToString :: cm_tl, STRING(x) :: st_tl) -> processor cm_tl (quotation_filter x :: st_tl)
 | (ToString :: cm_tl, NAME(x) :: st_tl) -> processor cm_tl (STRING(x) :: st_tl)
 | (Println :: cm_tl, STRING(x) :: st_tl) -> write_to_file x processor cm_tl st_tl
 | (CAT :: cm_tl, STRING(x) :: STRING(y) :: st_tl) -> processor cm_tl (STRING(y^x) :: st_tl)
