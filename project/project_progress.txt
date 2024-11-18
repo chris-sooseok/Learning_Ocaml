@@ -1,0 +1,12 @@
+
+Tip for interpreter part2
+
+Think the stack as the list of values
+Ocaml requires nested let for binding, but the interpreter has let ... end which allows
+mutiple bindings within it.
+
+- now stack as a list list stack
+- add environment to your processor
+- we are implementing static scoping rules
+- using let gives you a new scope
+- let end is like {} 
