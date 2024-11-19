@@ -40,3 +40,7 @@ static ancestor is called a static parent
 Variables have classification: local, nonlocal, and global - a good example is Python code
 
 (* Dynamic Scoping *)
+
+In the static world, the sequence of scopes are defiend by static ancestor
+However, dynamic scoping is based on calling sequences of program units, not their textual
+layout

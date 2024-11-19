@@ -1,0 +1,61 @@
+
+
+(* Local names (Local variables) *)
+Their scope is usually the body of the subprogram. They can be static or stack-dynamic (most common)
+
+(* Static Local names *)
+- Slightly more efficient (dont have to be allocated or deallocated at run time)
+- History sensitive (Since static local names take a static memory space, any change would be persistent)
+- can't have recursion with only static local variables
+
+(* Stack dynamic local names *)
+- slightly less efficient (refers to different memory cells at every call)
+- history insensitive
+
+(* Recursion in Ocaml *)
+Functional languages, like Ocaml, allows subprogram to be defined in other program.
+This way, we often make auxiliary functions to employ tail recursive function.
+Tail recursion is a specific type of recursion where the last thing that happens in the recursion is the call
+Compiler optimization transform recursion into a tight loop.
+
+(* Parameter passing *)
+g=h=1
+Function f(int x, int r):
+    r=6;
+    return r+r;
+End;
+g=f(4+g, h)
+
+- Is x bound to 5, or 4+g?
+- Will setting r=6 update h?
+- Do we pass h value or h address? (what if h is a big array?)
+
+
+(* Semantic models of parameter passing *)
+In mode, out mode, and inout mode
+
+(* Models of Transfer *) - Ways to implement the modality of the parameters
+- Physically move a value
+- An access path is transmitted (e.g. pointer or reference)
+
+
+
+(Pass by value (in mode))
+The value of the actual paramter is used to initialize the corresponding formal parameter
+- normally implemented by copying
+    - Aditional storage is required and actual move can be costly
+Immutable variables do not be needed to be copied?
+- Can be implemented by transmitting an access path, but not recommended since enforcing write-protection is not easy
+    - Must write-protect in the called subprogram and accesses cost more (indirect addressing)
+
+(Pass by result (Out mode))
+- When a parameter is passed by result, no value is transmitted to the subprogram
+- The corresponding formal parameter acts as a local variable
+    - Before read a variable, have to write to x first because there is no concrete value
+- Its value is transmitted to caller's actual parameter when control is returend to the caller, by physical move
+    - Require extra storage location and copy operation
+
+Potential Problems are
+- proc(p, p) : whichever formal parameter is copied back will represent the current value of p (which order are we going?)
+- proc (list[sub], sub) : Compute address of list[sub] at the beginning of the subprogram or end?
+

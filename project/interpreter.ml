@@ -86,133 +86,142 @@ let sv_cmd_list : command list = convert_strCmd_to_svCmd string_cmd_list
 
 in
 
-let write_to_file sv processor_func cm_tl st_tl m: unit =
+let write_to_file sv processor_func cm_tl ss mm: unit =
   file_write sv;
-  processor_func cm_tl st_tl m
+  processor_func cm_tl ss mm
 in
 
 let quotation_filter str = STRING (String.sub str 1 (String.length str - 2))
   
 in
 
-let rec processor (sv_cmd_li: command list) (s : stackValue list) (m : (stackValue * stackValue) list list) : unit =
-match (sv_cmd_li, s, m) with
-| (QUIT :: cm_tl, s, m) -> ()
+let rec fetch (name: stackValue) (mm : (stackValue * stackValue) list list) : stackValue =
+  match mm with
+  (* waht happens when there is no matching key? *)
+  (* keep search *)
+  | [] :: mm_tl -> fetch name mm_tl
+  | ((k, v) :: m) :: mm_tl -> if k = name then v else fetch name (m :: mm_tl)
+  | _ -> ERROR
+
+in
+
+let rec processor (cmd_li: command list) (ss : stackValue list list) (mm : (stackValue * stackValue) list list) : unit =
+match (cmd_li, ss , mm) with
 (* whether int is positive or negative, done through this line *)
-| (PUSH INT(sv) :: cm_tl, s, m) -> processor cm_tl (INT(sv) :: s) m
+| (PUSH INT(sv) :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((INT(sv) :: s) :: ss_tl) mm
   (* from the input file string is enclosed with "". Then, output doesn't contain "" *)
-| (PUSH STRING(sv) :: cm_tl, s, m) -> processor cm_tl (STRING(sv) :: s) m
+| (PUSH STRING(sv) :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((STRING(sv) :: s) :: ss_tl) mm
   (* -------------- any error case? *)
-| (PUSH NAME(sv) :: cm_tl, s, m)-> processor cm_tl (NAME(sv) :: s) m
-| (PUSH BOOL(sv) :: cm_tl, s, m) -> processor cm_tl (BOOL(sv) :: s) m
-| (PUSH ERROR :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (PUSH UNIT :: cm_tl, s, m) -> processor cm_tl (UNIT :: s) m
+| (PUSH NAME(sv) :: cm_tl, s :: ss_tl, m)-> processor cm_tl ((NAME(sv) :: s ) :: ss_tl) mm
+| (PUSH BOOL(sv) :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((BOOL(sv) :: s) :: ss_tl) mm
+| (PUSH ERROR :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (PUSH UNIT :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((UNIT :: s) :: ss_tl) mm
 (* error case for pop : empty list *)
-| (POP :: cm_tl, sv :: s_tl, m) -> processor cm_tl s_tl m
-| (POP :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
+| (POP :: cm_tl, (sv :: s) :: ss_tl, m) -> processor cm_tl (s :: ss_tl) mm
+| (POP :: cm_tl, [] :: ss_tl, m) -> processor cm_tl ((ERROR :: []) :: ss_tl) mm
 (* the code for pushing elements back wouldn't be necessary since we not  *)
 (* error cases for add : invalid type, one element, empty list*)
-| (ADD :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT (y+x) :: s_tl) m
-| (ADD :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
+| (ADD :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((INT (y+x) :: s) :: ss_tl) mm
+| (ADD :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, m) -> (
+  match fetch (NAME(y)) mm with
+  | INT(b) -> processor cm_tl ((INT(x+b) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+)
+| (ADD :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, m) -> (
+  match fetch (NAME(x)) mm with
+  | INT(a) -> processor cm_tl ((INT(a+y) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+)
+
+| (ADD :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, m) -> (
+  match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
+  | (INT(a), INT(b)) -> processor cm_tl ((INT(a+b) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+)
+| (ADD :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : invalid type, one element, empty list *)
-| (SUB :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT (y-x) :: s_tl) m
-| (SUB :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
+| (SUB :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((INT (y-x) :: s) :: ss_tl) mm
+| (SUB :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, m) -> (
+  match fetch (NAME(y)) mm with
+  | INT(b) -> processor cm_tl ((INT(x-b) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+)
+| (SUB :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, m) -> (
+  match fetch (NAME(x)) mm with
+  | INT(a) -> processor cm_tl ((INT(a-y) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+)
+
+| (SUB :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, m) -> (
+  match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
+  | (INT(a), INT(b)) -> processor cm_tl ((INT(a-b) :: s) :: ss_tl) mm
+  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+)
+| (SUB :: cm_tl, s :: ss_tl , m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : empty list, one element, invalid type *)
-| (MUL :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT (y*x) :: s_tl) m
-| (MUL :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
+| (MUL :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((INT (y*x) :: s) :: ss_tl) mm
+| (MUL :: cm_tl, s :: ss_tl , m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : division by 0, empty list, one element, invalid type*)
-| (DIV :: cm_tl, INT(0) :: INT(x) :: s_tl, m) -> processor cm_tl (ERROR :: s) m
-| (DIV :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT(y/x) :: s_tl) m
-| (DIV :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
+| (DIV :: cm_tl, (INT(0) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl) mm
+| (DIV :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((INT(y/x) :: s) :: ss_tl) mm
+| (DIV :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
 (* error cases for rem : mod by 0, empty list, one element, invalid type*)
-| (REM :: cm_tl, INT(x) :: INT(0) :: s_tl, m) -> processor cm_tl (ERROR :: s) m
-| (REM :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT(y mod x) :: s_tl) m
-| (REM :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (NEG :: cm_tl, INT(x) :: s_tl, m) -> processor cm_tl (INT(-x) :: s_tl) m
-| (NEG :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (SWAP :: cm_tl, x :: y :: s_tl, m) -> processor cm_tl (y :: x :: s_tl) m
-| (SWAP :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (ToString :: cm_tl, INT(x) :: s_tl, m) -> processor cm_tl (STRING(string_of_int(x)) :: s_tl) m
-| (ToString :: cm_tl, BOOL(true) :: s_tl, m) -> processor cm_tl (STRING(":true:") :: s_tl) m
-| (ToString :: cm_tl, BOOL(false) :: s_tl, m) -> processor cm_tl (STRING(":false:") :: s_tl) m
-| (ToString :: cm_tl, ERROR :: s_tl, m) -> processor cm_tl (STRING(":error:") :: s_tl) m
-| (ToString :: cm_tl, UNIT :: s_tl, m) -> processor cm_tl (STRING(":unit:") :: s_tl) m
-| (ToString :: cm_tl, STRING(x) :: s_tl, m) -> processor cm_tl (quotation_filter x :: s_tl) m
-| (ToString :: cm_tl, NAME(x) :: s_tl, m) -> processor cm_tl (STRING(x) :: s_tl) m
-| (Println :: cm_tl, STRING(x) :: s_tl, m) -> write_to_file x processor cm_tl s_tl m
+| (REM :: cm_tl, (INT(0) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl)  mm
+| (REM :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((INT(y mod x) :: s) :: ss_tl) mm
+| (REM :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (NEG :: cm_tl, (INT(x) :: s) :: ss_tl, m) -> processor cm_tl ((INT(-x) :: s) :: ss_tl) mm
+| (NEG :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (SWAP :: cm_tl, (x :: y :: s) :: ss_tl, m) -> processor cm_tl ((y :: x :: s) :: ss_tl) mm
+| (SWAP :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (INT(x) :: s) :: ss_tl, m) -> processor cm_tl ((STRING(string_of_int(x)) :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (BOOL(true) :: s) :: ss_tl, m) -> processor cm_tl ((STRING(":true:") :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (BOOL(false) :: s) :: ss_tl, m) -> processor cm_tl ((STRING(":false:") :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (ERROR :: s) :: ss_tl, m) -> processor cm_tl ((STRING(":error:") :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (UNIT :: s) :: ss_tl, m) -> processor cm_tl ((STRING(":unit:") :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (STRING(x) :: s) :: ss_tl, m) -> processor cm_tl ((quotation_filter x :: s) :: ss_tl) mm
+| (ToString :: cm_tl, (NAME(x) :: s) :: ss_tl, m) -> processor cm_tl ((STRING(x) :: s) :: ss_tl) mm
+| (Println :: cm_tl, (STRING(x) :: s) :: ss_tl, m) -> write_to_file x processor cm_tl (s::ss_tl) mm
 
-
-| (CAT :: cm_tl, STRING(x) :: STRING(y) :: s_tl, m) -> processor cm_tl (STRING(y^x) :: s_tl) m
-| (CAT :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (AND :: cm_tl, BOOL(x) :: BOOL(y) :: s_tl, m) -> processor cm_tl (BOOL(y && x) :: s_tl) m
-| (AND :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (OR :: cm_tl, BOOL(x) :: BOOL(y) :: s_tl, m) -> processor cm_tl (BOOL(y || x) :: s_tl) m
-| (OR :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (NOT :: cm_tl, BOOL(x) :: s_tl, m) -> processor cm_tl (BOOL(not x) :: s_tl) m
-| (NOT :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (EQUAL :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (BOOL(y == x) :: s_tl) m
-| (EQUAL :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-| (LESSTHAN :: cm_tl, INT(x) :: INT(y) :: s_tl, m) -> processor cm_tl (BOOL(y < x) :: s_tl) m
-| (LESSTHAN :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-
-(* error when 1. bind an identifier to an unbound identifier 2. if stack is empty *)
-(* how about an identifer which its key already exists and pusing another identifer that has the same key*)
-| (BIND :: cm_tl, ERROR :: NAME(k) :: s_tl, m) -> processor cm_tl (ERROR :: s) m
-(* bind k to v of v*)
-| (BIND :: cm_tl, NAME(v) :: NAME(k) :: s_tl, m) -> processor cm_tl (UNIT :: s_tl) m
-| (BIND :: cm_tl, v :: NAME(k) :: s_tl, m) -> processor cm_tl (UNIT :: s_tl) (((NAME(k),v) :: l) :: m)
-
-(*
-| (BIND :: cm_tl, STRING(v) :: NAME(k) :: s_tl) -> processor cm_tl (UNIT :: s_tl) m
-| (BIND :: cm_tl, BOOL(v) :: NAME(k) :: s_tl) -> processor cm_tl (UNIT :: s_tl) m
-| (BIND :: cm_tl, UNIT :: NAME(k) :: s_tl) -> processor cm_tl (UNIT :: s_tl) m
-| (BIND :: cm_tl, NAME(v) :: NAME(k) :: s_tl) -> processor cm_tl (UNIT :: s_tl) m
-| (BIND :: cm_tl, st_tl) -> processor cm_tl (ERROR :: st_tl) m
-*)
+| (BIND :: cm_tl, (NAME(v) :: NAME(k) :: s) :: ss_tl, m :: mm_tl) -> (
+  match fetch (NAME(v)) mm with
+  | ERROR -> processor cm_tl ((ERROR :: NAME(v) :: NAME(k) :: s) :: ss_tl) mm
+  | v -> processor cm_tl ((UNIT :: s) :: ss_tl) (((NAME(k), v) :: m) :: mm_tl)
+)
+| (BIND :: cm_tl, (sv :: NAME(name) :: s) :: ss_tl, m :: mm_tl) ->
+  processor cm_tl ((UNIT :: s) :: ss_tl) (((NAME(name), sv) :: m) :: mm_tl)
+  
+| (LET :: cm_tl, _, _) -> processor cm_tl ([] :: ss) ([] :: mm)
+| (END :: cm_tl, s :: ss_tl, m :: mm_tl) -> processor cm_tl ss_tl mm_tl
 
 
 
-| (ADD :: cm_tl, NAME(x) :: NAME(y) :: s_tl, m) -> processor cm_tl (INT(y+x) :: s_tl) m
-| (ADD :: cm_tl, INT(x) :: NAME(y) :: s_tl, m) -> processor cm_tl (INT(y+x) :: s_tl) m
-| (ADD :: cm_tl, NAME(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT(y+x) :: s_tl) m
+| (CAT :: cm_tl, (STRING(x) :: STRING(y) :: s) :: ss_tl, m) -> processor cm_tl ((STRING(y^x) :: s):: ss_tl) mm
+| (CAT :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (AND :: cm_tl, (BOOL(x) :: BOOL(y) :: s) :: ss_tl, m) -> processor cm_tl ((BOOL(y && x) :: s) :: ss_tl) mm
+| (AND :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (OR :: cm_tl, (BOOL(x) :: BOOL(y) ::s) :: ss_tl, m) -> processor cm_tl ((BOOL(y || x) :: s) :: ss_tl) mm
+| (OR :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (NOT :: cm_tl, (BOOL(x) :: s) :: ss_tl, m) -> processor cm_tl ((BOOL(not x) :: s) :: ss_tl) mm
+| (NOT :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (EQUAL :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, m) -> processor cm_tl ((BOOL(y = x) :: s) :: ss_tl) mm
+| (EQUAL :: cm_tl, s :: ss_tl, m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (LESSTHAN :: cm_tl, (INT(x) :: INT(y) :: s):: ss_tl, m) -> processor cm_tl ((BOOL(y < x) :: s) :: ss_tl) mm
+| (LESSTHAN :: cm_tl, s :: ss_tl , m) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| (IF :: cm_tl, (x :: y :: BOOL(true) :: s) :: ss_tl, m) -> processor cm_tl ((x :: s) :: ss_tl) mm
+| (IF :: cm_tl, (x :: y :: BOOL(false) :: s) :: ss_tl, m) -> processor cm_tl ((y :: s) :: ss_tl) mm
+| (IF :: cm_tl, s :: ss_tl , m) -> processor cm_tl ((ERROR :: s) :: ss) mm
 
-(*
-| (SUB :: cm_tl, NAME(x) :: NAME(y) :: s_tl) -> processor cm_tl (INT(y-x) :: s_tl) m
 
-| (MUL :: cm_tl, NAME(x) :: NAME(y) :: s_tl) -> processor cm_tl (INT(y*x) :: s_tl) m
-
-| (DIV :: cm_tl, NAME(x) :: NAME(y) :: s_tl) -> processor cm_tl (INT(y/x) :: s_tl) m
-
-| (REM :: cm_tl, NAME(x) :: NAME(y) :: s_tl) -> processor cm_tl (INT(y mod x) :: s_tl) m
-
-| (NEG :: cm_tl, NAME(x) :: s_tl) -> processor cm_tl (INT(-x) :: s_tl) m
-
-| (SWAP :: cm_tl, NAME(x) :: NAME(y) :: s_tl) -> processor cm_tl (NAME(y) :: NAME(x) :: s_tl) m
-
-| (ToString :: cm_tl, NAME(x) :: s_tl) -> processor cm_tl (STRING(x) :: s_tl) m
-
-*)
-
-| (IF :: cm_tl, x :: y :: BOOL(true) :: s_tl, m) -> processor cm_tl (x :: s_tl) m
-| (IF :: cm_tl, x :: y :: BOOL(false) :: s_tl, m) -> processor cm_tl (y :: s_tl) m
-| (IF :: cm_tl, s, m) -> processor cm_tl (ERROR :: s) m
-
-(* Will create a new environment *)
-| (LET :: cm_tl, s, m) -> processor cm_tl s 
-
-(* will close the environment *)
-| (END :: cm_tl, s, m) -> processor cm_tl s 
- 
 (*| ([], _) -> processor sv_cmd_li (ERROR :: stack) *)
-(* | _ -> processor sv_cmd_li (ERROR :: stack) *)
+(*| _ -> processor sv_cmd_li (ERROR :: stack) *)
 | ([], _, _) -> ()
 | _ -> ()
 
 in
 
-processor sv_cmd_list [];;
+processor sv_cmd_list [[]] [[]];;
 
-(*
+
 interpreter ("Projectpart1TestInputs/input1.txt","Projectpart1TestOutputs/my_output1.txt");
 interpreter ("Projectpart1TestInputs/input2.txt","Projectpart1TestOutputs/my_output2.txt");
 interpreter ("Projectpart1TestInputs/input3.txt","Projectpart1TestOutputs/my_output3.txt");
@@ -223,4 +232,4 @@ interpreter ("Projectpart1TestInputs/input7.txt","Projectpart1TestOutputs/my_out
 interpreter ("Projectpart1TestInputs/input8.txt","Projectpart1TestOutputs/my_output8.txt");
 interpreter ("Projectpart1TestInputs/input9.txt","Projectpart1TestOutputs/my_output9.txt");
 interpreter ("Projectpart1TestInputs/input10.txt","Projectpart1TestOutputs/my_output10.txt");;
-*)
+

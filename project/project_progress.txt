@@ -10,3 +10,27 @@ mutiple bindings within it.
 - we are implementing static scoping rules
 - using let gives you a new scope
 - let end is like {} 
+
+
+let marks the beginning of a new environment
+
+
+Deliveries
+- what data structure need to use for environment?
+
+
+binding will store (str, sv)
+when any instruction performed with variables, we simply replicate the instruction after fetching
+
+| (ADD :: cm_tl, NAME(x) :: NAME(y) :: s_tl, m) -> processor sv_cmd_li ( :: s_tl) m
+| (ADD :: cm_tl, INT(x) :: NAME(y) :: s_tl, m) -> processor cm_tl (INT(y+x) :: s_tl) m
+| (ADD :: cm_tl, NAME(x) :: INT(y) :: s_tl, m) -> processor cm_tl (INT(y+x) :: s_tl) m
+
+like this we will need match cases
+
+
+Questions
+1. is it guaranteed that we can locate value in env? - binding
+2. if not, do we return error in the case not being able to locate the value?
+3. do we have to consider the case of bindning error and name?
+4. do we need to add more match cases for all instructions so that we can deal with name?
