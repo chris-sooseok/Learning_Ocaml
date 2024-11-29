@@ -1,0 +1,82 @@
+(* Implementing subprograms *)
+
+
+(* Function Call *)
+Call Semantics:
+- Save the execution status of the caller
+- In mode and inout mode parameters must be provided
+- Pass the return address to the called subprogram
+- Transfer control to the called subprogram
+
+(* Function Return *)
+Return Semantics
+- If pass-by-value-result or out mode parameters are used, move the current values of those parameters to their
+corresponding actual parameters
+- Restore the execution status of the caller
+- Transfer control back to the caller
+
+(* Activation Records for Simple Functions *)
+- We need to store some information to guarantee the correct execution of the subprogram. This constitutes the activation
+record of the subprogram
+- [Local Variables], [Parameters], [Return Address]
+Local Variables: locally defiend by the subprogram 
+    - (known upfront, statically allocated since no nested functions are allowed)
+Parameters : the actual parameters passed to the subprogram
+- The activation record contains the non-code information that we need for the excecution of the program
+
+(* Information we need to store *)
+- An activation record instance is a concrete example of an activation re cord (the collection of data for
+a particular subprogram activation)
+- The activation rocord contains the non-code information that we need for the execution of the program
+
+- The activation record format is static
+    - we know the size of variables, the number of parameters ahead
+- An activation record instance is dynamically created when a subprogram is called
+- An activation record instance is dynamically deallocated when a subprogram returns
+    - meaning we only need this record for executing that particular subprogram
+- Activation record instances reside on the run-time stack
+    - For each record we need to maintain an Environment Pointer (EP) pointing at the base of the instance
+    and used to deallocating it
+
+function sub1 (...){};
+function sub2 (...Sub1){};
+function sub3 (...Sub2){};
+
+The sequence of function calls are nested, but the definition of subfuntion is not nested
+
+We dont need return address for interpreter project because our code segment is just a sequence of commands
+
+
+
+(* Local variables *)
+- Variables whose scope is usually the body of the subprogram in which they are defined
+- They can be static or stack-dynamic
+- A subprogram can use variables that are heap-dynamic, but these do not count as local since their lifetime is
+greater than the subprogram itself
+
+(* Implementing subprograms with stack-dynamic local variables *)
+- The activation record format is static, but its size may be dynamic to deal with stack-dynamic variables
+    -the structure is the same, but the number of variables, etc, may be different
+- We need a dynamic link pointing to the base of the instance of the activation record of the caller - this
+will help us deallocate the activation record instance when it has dynamic size
+- The collection of dynamic links in the stack at a given time is called the dynamic chainm, or chain
+
+(* Function calls for general programs *)
+General semantics of calls to a subprogram
+- inmode and inout mode parameters must be provided
+- stack-dynamic allocation of local variables
+- save the execution status of the calling program
+- transfer of control to the subprogram and arrange for the return
+- If subprogram nesting is supported, access to nonlocal variables must be arranged through a static link
+(* Function returns for general programs *)
+- Out mode and inout mode parameters must have their values returned
+- Deallocation of stack-dynamic local variables
+- Restore the execution status
+- Return control to the caller
+
+
+
+(* Examples of closure *)
+let y = 2 in let plus2 = fun x -> x + y in plus2 (plus2 4)
+
+The closure of this is (fun x -> x + y, y=2)

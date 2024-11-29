@@ -1,7 +1,5 @@
 
 
-
-
 let empty = fun y -> None
 let lookup key env = env key;;
 

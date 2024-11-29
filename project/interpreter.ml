@@ -1,11 +1,14 @@
 
 type stackValue = STRING of string | INT of int | BOOL of bool
-| ERROR | NAME of string | UNIT
+| ERROR | NAME of string | UNIT | CLOSURE of (stackValue * (command list) * (stackValue*stackValue)list list)
 
-(* ------------------------- doesn't matter if the types are all capitalized? *)
-type command = ADD | SUB | MUL | DIV | REM | NEG | PUSH of stackValue | POP
+and 
+
+command = ADD | SUB | MUL | DIV | REM | NEG | PUSH of stackValue | POP
 | SWAP | ToString | Println | QUIT | CAT | AND | OR | NOT | EQUAL | LESSTHAN
 | BIND | IF | LET | END
+
+
 
 let interpreter ((input : string), (output : string )) : unit = 
 

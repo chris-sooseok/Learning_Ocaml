@@ -1,16 +1,36 @@
+(* Why subprograms *)
+Learning goals - basic understanding of subprograms and issues associated with their use and design/implementation
+Data abstraction vs control abstraction
+Data - to represent information abstractly. e.g. types
+control - code reuse, and modularity 
 
+(* Design issues for subprograms *)
+- Are local names (variables) statically or dynamically allocated?
+- Can subprogram definitions be nested?
+- What parameter passing methods are provided?
+- If subprograms can be passed as parameters and subprograms can be nested, what is the referencing environment
+of a passed subprogram?
+- Can subprograms be generic?
+- Closures...
 
+(** Definition **)
 (* Local names (Local variables) *)
-Their scope is usually the body of the subprogram. They can be static or stack-dynamic (most common)
+Their scope is within a subprogram.
+Can be static or stack-dynamic (most common)
 
 (* Static Local names *)
 - Slightly more efficient (dont have to be allocated or deallocated at run time)
-- History sensitive (Since static local names take a static memory space, any change would be persistent)
+- History sensitive (We can see what a previous call to current function performed)
+(Since static local names take a static memory space, we know where it resides to look at)
 - can't have recursion with only static local variables
 
 (* Stack dynamic local names *)
 - slightly less efficient (refers to different memory cells at every call)
 - history insensitive
+
+(* Closure *)
+let pythagorean x y z = let sqr n = n*n in sqr x + sqr y = sqr z
+sqr n = n*n is locally defined inside a program, which will be represented by a closure
 
 (* Recursion in Ocaml *)
 Functional languages, like Ocaml, allows subprogram to be defined in other program.
@@ -18,7 +38,7 @@ This way, we often make auxiliary functions to employ tail recursive function.
 Tail recursion is a specific type of recursion where the last thing that happens in the recursion is the call
 Compiler optimization transform recursion into a tight loop.
 
-(* Parameter passing *)
+(* About Parameter passing *)
 g=h=1
 Function f(int x, int r):
     r=6;
@@ -30,32 +50,126 @@ g=f(4+g, h)
 - Will setting r=6 update h?
 - Do we pass h value or h address? (what if h is a big array?)
 
-
 (* Semantic models of parameter passing *)
 In mode, out mode, and inout mode
+- in mode and inout mode will be implemented for the project
 
 (* Models of Transfer *) - Ways to implement the modality of the parameters
 - Physically move a value
 - An access path is transmitted (e.g. pointer or reference)
-
-
-
-(Pass by value (in mode))
+ 
+(Pass by value (In mode))
 The value of the actual paramter is used to initialize the corresponding formal parameter
 - normally implemented by copying
     - Aditional storage is required and actual move can be costly
-Immutable variables do not be needed to be copied?
+Immutable language like Ocaml might not need to copy
 - Can be implemented by transmitting an access path, but not recommended since enforcing write-protection is not easy
     - Must write-protect in the called subprogram and accesses cost more (indirect addressing)
 
 (Pass by result (Out mode))
-- When a parameter is passed by result, no value is transmitted to the subprogram
+- When a parameter is passed by result to a subprogram, no value is transmitted to the subprogram
 - The corresponding formal parameter acts as a local variable
     - Before read a variable, have to write to x first because there is no concrete value
 - Its value is transmitted to caller's actual parameter when control is returend to the caller, by physical move
     - Require extra storage location and copy operation
+- Order sensitive if (out a, out a) is passed. Even compiler may reorder lines of code
 
 Potential Problems are
 - proc(p, p) : whichever formal parameter is copied back will represent the current value of p (which order are we going?)
 - proc (list[sub], sub) : Compute address of list[sub] at the beginning of the subprogram or end?
+
+(Pass by value result (inout mode))
+- A combination of pass-by-value and pass-by-result
+- Actual values are copied in both directions
+- Formal parameters have local storage
+- Disadvantages:
+    - Those of pass-by-result
+    - Those of pass-by-value
+
+(Pass by Reference (Inout Mode))
+- Pass an access path (address on the heap)
+- Advantage : Passing process if efficient (no copying and no duplicated storage)
+- Disadvantage :
+    - Slower access (compared to pass-by-value) to formal parameters
+    - Collisions - two names tied to one address
+    - Alias (access broadened) - multiple names tied to onn address 
+
+ex. A alias collision between formal and non-local
+
+int *global 
+void main (){
+    sub(global)
+}
+void sub (int *param){
+    Here global and param are aliases
+}
+
+
+(Pass by Name (Inout Mode))
+- Allows flexibility in late binding (You can update x before its computation)
+- Formals are bound to and access method at the time of the call, but actual binding 
+to a value or address takes place at the time of a reference or assignment 
+- Not very efficient nor used often
+
+ex. rather than computing (x+1), just bound x to a value, and pass the expression
+
+
+(* Implmenting Parameter-Passing Methods *)
+- In most languages parameter communication takes place through the run-time stack
+- Pass by value parameters have their values copied into stack lcoations
+- Pass by reference are the simplest to implement; only an address is placed in the stack
+- Pass by result the caller reads from the stack the final value of the parameter before
+the stack of the callee is disposed
+
+(* Design consideration for parameter passing *)
+- Two important considerations
+    - Efficiency
+    - One-way or two-way data transfer
+- But the above considerations are in conflict
+    - Good programming suggest limited access to variables, which means one-way whenver possible
+    - But pass-by-reference is more efficient to pass structures of significant size
+
+(* Parameters that are Subprogram Names: Referencing Environment *)
+Passing a subprogram names as parameters
+- Are parameters type checked?
+- What is the correct referencing environment for a subprogram that was sent as a parameter?
+In other words, what are the rules on what variables a subprogram will leverage when it is called?
+
+(* Closures *) - function definition closes - the body of function definition itself
+Closure is a subprogram and a referencing environment
+- The referencing environment is needed if the subprogram can be called from any arbitrary place in the program
+- A static-scope language that doesn't permit nested subprograms doesn't need closures
+- Closures are needed if a subprogram can access variables in nesting scopes and it can be called from anywhere
+- To support closures, an implementation may need to provide unlimited extent (unlimited life time) to some variables
+(because a subprogram may access a nonlocal variable that is normally no longer alive)
+
+(* Parameters that are subprogram names : Referencing Environment *)
+- Shallow binding : The environmnet of the call statement that enacts the passed subprogram (most natural for
+dynamic-scoped languages)
+- Deep binding : The environment of the definition of the passed subprogram (most natural for static-scoped languages)
+- Ad hoc binding : The environment of the call statement that passed the subprogram
+
+function sub1 () {
+    var x;
+    function sub2 () {
+        print(x);
+    }
+    function sub3() {
+        var x;
+        x = 3;
+        sub4(sub2);
+    }
+    function sub4 (subx){
+        var x;
+        x = 4;
+        subx();
+    };
+    x = 1;
+    sub3();
+}
+
+With shallow-binding, x prints 4
+With deep-binding, x prints 1
+With Ad hoc binding, x prints 3
+
 
