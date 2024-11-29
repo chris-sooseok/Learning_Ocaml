@@ -1,6 +1,7 @@
 
 type stackValue = STRING of string | INT of int | BOOL of bool
-| ERROR | NAME of string | UNIT | CLOSURE of (stackValue * (command list) * (stackValue*stackValue)list list)
+| ERROR | NAME of string | UNIT |
+CLOSURE of (stackValue * (command list) * (stackValue*stackValue)list list)
 
 and 
 
@@ -96,7 +97,7 @@ in
 (* let sv_cmd_list : command list = convert_strCmd_to_svCmd string_cmd_list;; *)
 
 (* Convert string command list to implemented typed command list *)
-let sv_cmd_list : command list = convert_strCmd_to_svCmd string_cmd_list
+let sv_cmd_list : command list list = (convert_strCmd_to_svCmd string_cmd_list) :: []
 
 in
 
@@ -123,270 +124,270 @@ let rec fetch (name: stackValue) (mm : (stackValue * stackValue) list list) : st
 
 in
 
-let rec processor (cmd_li: command list) (ss : stackValue list list) (mm : (stackValue * stackValue) list list) : unit =
-match (cmd_li, ss , mm) with
+let rec processor (cc: command list list) (ss : stackValue list list) (mm : (stackValue * stackValue) list list) : unit =
+match (cc, ss , mm) with
 (* whether int is positive or negative, done through this line *)
-| (PUSH INT(sv) :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((INT(sv) :: s) :: ss_tl) mm
+| ((PUSH INT(sv) :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((INT(sv) :: s) :: ss_tl) mm
   (* from the input file string is enclosed with "". Then, output doesn't contain "" *)
-| (PUSH STRING(sv) :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((STRING(sv) :: s) :: ss_tl) mm
+| ((PUSH STRING(sv) :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((STRING(sv) :: s) :: ss_tl) mm
   (* -------------- any error case? *)
-| (PUSH NAME(sv) :: cm_tl, s :: ss_tl, _)-> processor cm_tl ((NAME(sv) :: s ) :: ss_tl) mm
-| (PUSH BOOL(sv) :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((BOOL(sv) :: s) :: ss_tl) mm
-| (PUSH ERROR :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
-| (PUSH UNIT :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((UNIT :: s) :: ss_tl) mm
+| ((PUSH NAME(sv) :: c) :: cc_tl, s :: ss_tl, _)-> processor (c::cc_tl) ((NAME(sv) :: s ) :: ss_tl) mm
+| ((PUSH BOOL(sv) :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((BOOL(sv) :: s) :: ss_tl) mm
+| ((PUSH ERROR :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
+| ((PUSH UNIT :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((UNIT :: s) :: ss_tl) mm
 (* error case for pop : empty list *)
-| (POP :: cm_tl, (sv :: s) :: ss_tl, _) -> processor cm_tl (s :: ss_tl) mm
-| (POP :: cm_tl, [] :: ss_tl, _) -> processor cm_tl ((ERROR :: []) :: ss_tl) mm
+| ((POP :: c) :: cc_tl, (sv :: s) :: ss_tl, _) -> processor (c::cc_tl) (s :: ss_tl) mm
+| ((POP :: c) :: cc_tl, [] :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: []) :: ss_tl) mm
 (* the code for pushing elements back wouldn't be necessary since we not  *)
 (* error cases for add : invalid type, one element, empty list*)
-| (ADD :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((INT (y+x) :: s) :: ss_tl) mm
-| (ADD :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((ADD :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT (y+x) :: s) :: ss_tl) mm
+| ((ADD :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((INT(b+x) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((INT(b+x) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (ADD :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((ADD :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) -> processor cm_tl ((INT(y+a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(y+a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 )
-| (ADD :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((ADD :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
-  | (INT(a), INT(b)) -> processor cm_tl ((INT(b+a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) -> processor (c::cc_tl) ((INT(b+a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (ADD :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((ADD :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : invalid type, one element, empty list *)
-| (SUB :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((INT (y-x) :: s) :: ss_tl) mm
-| (SUB :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((SUB :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT (y-x) :: s) :: ss_tl) mm
+| ((SUB :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((INT(b-x) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((INT(b-x) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (SUB :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((SUB :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) -> processor cm_tl ((INT(y-a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(y-a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 )
 
-| (SUB :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((SUB :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
-  | (INT(a), INT(b)) -> processor cm_tl ((INT(b-a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) -> processor (c::cc_tl) ((INT(b-a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (SUB :: cm_tl, s :: ss_tl , _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((SUB :: c) :: cc_tl, s :: ss_tl , _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : empty list, one element, invalid type *)
-| (MUL :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((INT (y*x) :: s) :: ss_tl) mm
-| (MUL :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((MUL :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT (y*x) :: s) :: ss_tl) mm
+| ((MUL :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((INT(x*b) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((INT(x*b) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (MUL :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((MUL :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) -> processor cm_tl ((INT(a*y) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(a*y) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 )
-| (MUL :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((MUL :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
-  | (INT(a), INT(b)) -> processor cm_tl ((INT(a*b) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) -> processor (c::cc_tl) ((INT(a*b) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (MUL :: cm_tl, s :: ss_tl , _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((MUL :: c) :: cc_tl, s :: ss_tl , _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 (* error cases for sub : division by 0, empty list, one element, invalid type*)
-| (DIV :: cm_tl, (INT(0) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl) mm
-| (DIV :: cm_tl, (INT(0) :: NAME(y) :: s) :: ss_tl, _) -> processor cm_tl ((ERROR :: INT(0) :: NAME(y) :: s) :: ss_tl) mm
-| (DIV :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((INT(y/x) :: s) :: ss_tl) mm
-| (DIV :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((DIV :: c) :: cc_tl, (INT(0) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl) mm
+| ((DIV :: c) :: cc_tl, (INT(0) :: NAME(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: INT(0) :: NAME(y) :: s) :: ss_tl) mm
+| ((DIV :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT(y/x) :: s) :: ss_tl) mm
+| ((DIV :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((INT(b/x) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((INT(b/x) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (DIV :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((DIV :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(0) -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
-  | INT(a) -> processor cm_tl ((INT(y/a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(0) -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(y/a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 )
-| (DIV :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((DIV :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
-  | (INT(0), INT(b)) -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
-  | (INT(a), INT(b)) -> processor cm_tl ((INT(b/a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(0), INT(b)) -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) -> processor (c::cc_tl) ((INT(b/a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (DIV :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((DIV :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 (* error cases for rem : mod by 0, empty list, one element, invalid type*)
-| (REM :: cm_tl, (INT(0) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl)  mm
-| (REM :: cm_tl, (INT(0) :: NAME(y) :: s) :: ss_tl, _) -> processor cm_tl ((ERROR :: INT(0) :: NAME(y) :: s) :: ss_tl) mm
-| (REM :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((INT(y mod x) :: s) :: ss_tl) mm
-| (REM :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((REM :: c) :: cc_tl, (INT(0) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: INT(0) :: INT(y) :: s) :: ss_tl)  mm
+| ((REM :: c) :: cc_tl, (INT(0) :: NAME(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: INT(0) :: NAME(y) :: s) :: ss_tl) mm
+| ((REM :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT(y mod x) :: s) :: ss_tl) mm
+| ((REM :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((INT(b mod x) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((INT(b mod x) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (REM :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((REM :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(0) -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
-  | INT(a) -> processor cm_tl ((INT(y mod a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(0) -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(y mod a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 )
-| (REM :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((REM :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch ((NAME(x))) mm, fetch (NAME(y)) mm)  with
-  | (INT(0), INT(b)) -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
-  | (INT(a), INT(b)) -> processor cm_tl ((INT(b mod a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(0), INT(b)) -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) -> processor (c::cc_tl) ((INT(b mod a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 )
-| (REM :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((REM :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
 (* Negation works on variable? *)
-| (NEG :: cm_tl, (INT(x) :: s) :: ss_tl, _) -> processor cm_tl ((INT(-x) :: s) :: ss_tl) mm
-| (NEG :: cm_tl, (NAME(x) :: s) :: ss_tl, _) -> (
+| ((NEG :: c) :: cc_tl, (INT(x) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((INT(-x) :: s) :: ss_tl) mm
+| ((NEG :: c) :: cc_tl, (NAME(x) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) -> processor cm_tl ((INT(-a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((INT(-a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: s) :: ss_tl) mm
 )
-| (NEG :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((NEG :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (SWAP :: cm_tl, (x :: y :: s) :: ss_tl, _) -> processor cm_tl ((y :: x :: s) :: ss_tl) mm
-| (SWAP :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (INT(x) :: s) :: ss_tl, _) -> processor cm_tl ((STRING(string_of_int(x)) :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (BOOL(true) :: s) :: ss_tl, _) -> processor cm_tl ((STRING(":true:") :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (BOOL(false) :: s) :: ss_tl, _) -> processor cm_tl ((STRING(":false:") :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (ERROR :: s) :: ss_tl, _) -> processor cm_tl ((STRING(":error:") :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (UNIT :: s) :: ss_tl, _) -> processor cm_tl ((STRING(":unit:") :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (STRING(x) :: s) :: ss_tl, _) -> processor cm_tl ((quotation_filter_for_tostring x :: s) :: ss_tl) mm
-| (ToString :: cm_tl, (NAME(x) :: s) :: ss_tl, _) -> processor cm_tl ((STRING(x) :: s) :: ss_tl) mm
-| (ToString :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
-| (Println :: cm_tl, (STRING(x) :: s) :: ss_tl, _) -> write_to_file x processor cm_tl (s::ss_tl) mm
-| (Println :: cm_tl, s :: ss_tl, _) -> processor cm_tl ss mm
+| ((SWAP :: c) :: cc_tl, (x :: y :: s) :: ss_tl, _) -> processor (c::cc_tl) ((y :: x :: s) :: ss_tl) mm
+| ((SWAP :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (INT(x) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(string_of_int(x)) :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (BOOL(true) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(":true:") :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (BOOL(false) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(":false:") :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (ERROR :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(":error:") :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (UNIT :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(":unit:") :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (STRING(x) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((quotation_filter_for_tostring x :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, (NAME(x) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((STRING(x) :: s) :: ss_tl) mm
+| ((ToString :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
+| ((Println :: c) :: cc_tl, (STRING(x) :: s) :: ss_tl, _) -> write_to_file x processor (c::cc_tl) (s::ss_tl) mm
+| ((Println :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ss mm
 
 (* check name,name and error,name cases first to filter these from sv,name case *)
-| (BIND :: cm_tl, (sv :: NAME(k) :: s) :: ss_tl, m :: mm_tl) -> (
+| ((BIND :: c) :: cc_tl, (sv :: NAME(k) :: s) :: ss_tl, m :: mm_tl) -> (
   match sv with
   | NAME(v) -> (
               match fetch (NAME(v)) mm with 
-              | ERROR -> processor cm_tl ((ERROR :: sv :: NAME(k) :: s) :: ss_tl) mm
-              | fetched_value -> processor cm_tl ((UNIT :: s) :: ss_tl) (((NAME(k), fetched_value) :: m) :: mm_tl)
+              | ERROR -> processor (c::cc_tl) ((ERROR :: sv :: NAME(k) :: s) :: ss_tl) mm
+              | fetched_value -> processor (c::cc_tl) ((UNIT :: s) :: ss_tl) (((NAME(k), fetched_value) :: m) :: mm_tl)
               )
-  | ERROR -> processor cm_tl ((ERROR :: ERROR :: NAME(k) :: s) :: ss_tl) mm
-  | value -> processor cm_tl ((UNIT :: s) :: ss_tl) (((NAME(k), value) :: m) :: mm_tl)
+  | ERROR -> processor (c::cc_tl) ((ERROR :: ERROR :: NAME(k) :: s) :: ss_tl) mm
+  | value -> processor (c::cc_tl) ((UNIT :: s) :: ss_tl) (((NAME(k), value) :: m) :: mm_tl)
   )
-  | (BIND :: cm_tl, s :: ss_tl, m :: mm_tl) ->
-    processor cm_tl ((ERROR :: s) :: ss_tl) mm
+  | ((BIND :: c) :: cc_tl, s :: ss_tl, m :: mm_tl) ->
+    processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
   
-| (LET :: cm_tl, s :: ss_tl, _) -> processor cm_tl (s :: ss) ([] :: mm)
+| ((LET :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) (s :: ss) ([] :: mm)
 (*
 | (LET :: cm_tl, s :: ss_tl, _) -> processor cm_tl (s :: ss) ([] :: mm)*)
-| (END :: cm_tl, (sv :: s) :: prev_s :: ss_tl, m :: mm_tl) -> processor cm_tl ((sv :: prev_s) :: ss_tl) mm_tl
+| ((END :: c) :: cc_tl, (sv :: s) :: prev_s :: ss_tl, m :: mm_tl) -> processor (c::cc_tl) ((sv :: prev_s) :: ss_tl) mm_tl
 (* when the most top value is variable, return the variable or value?*)
 
-| (CAT :: cm_tl, (STRING(x) :: STRING(y) :: s) :: ss_tl, _) -> processor cm_tl ((quotation_filter_for_concat y x :: s):: ss_tl) mm
-| (CAT :: cm_tl, (STRING(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((CAT :: c) :: cc_tl, (STRING(x) :: STRING(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((quotation_filter_for_concat y x :: s):: ss_tl) mm
+| ((CAT :: c) :: cc_tl, (STRING(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | STRING(b) -> processor cm_tl ((quotation_filter_for_concat b x :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: STRING(x) :: NAME(y) :: s) :: ss_tl) mm
+  | STRING(b) -> processor (c::cc_tl) ((quotation_filter_for_concat b x :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: STRING(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (CAT :: cm_tl, (NAME(x) :: STRING(y) :: s) :: ss_tl, _) -> (
+| ((CAT :: c) :: cc_tl, (NAME(x) :: STRING(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | STRING(a) -> processor cm_tl ((quotation_filter_for_concat y a :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: STRING(y) :: s) :: ss_tl) mm
+  | STRING(a) -> processor (c::cc_tl) ((quotation_filter_for_concat y a :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: STRING(y) :: s) :: ss_tl) mm
 ) 
-| (CAT :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((CAT :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch (NAME(x)) mm, fetch (NAME(y)) mm) with
-  | (STRING(a), STRING(b)) -> processor cm_tl ((quotation_filter_for_concat b a :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (STRING(a), STRING(b)) -> processor (c::cc_tl) ((quotation_filter_for_concat b a :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (CAT :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((CAT :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (AND :: cm_tl, (BOOL(x) :: BOOL(y) :: s) :: ss_tl, _) -> processor cm_tl ((BOOL(x && y) :: s) :: ss_tl) mm
-| (AND :: cm_tl, (BOOL(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((AND :: c) :: cc_tl, (BOOL(x) :: BOOL(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((BOOL(x && y) :: s) :: ss_tl) mm
+| ((AND :: c) :: cc_tl, (BOOL(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | BOOL(b) -> processor cm_tl ((BOOL(x && b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: BOOL(x) :: NAME(y) :: s) :: ss_tl) mm
+  | BOOL(b) -> processor (c::cc_tl) ((BOOL(x && b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: BOOL(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (AND :: cm_tl, (NAME(x) :: BOOL(y) :: s) :: ss_tl, _) -> (
+| ((AND :: c) :: cc_tl, (NAME(x) :: BOOL(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | BOOL(a) -> processor cm_tl ((BOOL(a && y) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: BOOL(y) :: s) :: ss_tl) mm
+  | BOOL(a) -> processor (c::cc_tl) ((BOOL(a && y) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: BOOL(y) :: s) :: ss_tl) mm
 ) 
-| (AND :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((AND :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch (NAME(x)) mm, fetch (NAME(y)) mm) with
-  | (BOOL(a), BOOL(b)) -> processor cm_tl ((BOOL(a && b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (BOOL(a), BOOL(b)) -> processor (c::cc_tl) ((BOOL(a && b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (AND :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((AND :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (OR :: cm_tl, (BOOL(x) :: BOOL(y) ::s) :: ss_tl, _) -> processor cm_tl ((BOOL(x || y) :: s) :: ss_tl) mm
-| (OR :: cm_tl, (BOOL(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((OR :: c) :: cc_tl, (BOOL(x) :: BOOL(y) ::s) :: ss_tl, _) -> processor (c::cc_tl) ((BOOL(x || y) :: s) :: ss_tl) mm
+| ((OR :: c) :: cc_tl, (BOOL(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | BOOL(b) ->  processor cm_tl ((BOOL(x || b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: BOOL(x) :: NAME(y) :: s) :: ss_tl) mm
+  | BOOL(b) ->  processor (c::cc_tl) ((BOOL(x || b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: BOOL(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (OR :: cm_tl, (NAME(x) :: BOOL(y) :: s) :: ss_tl, _) -> (
+| ((OR :: c) :: cc_tl, (NAME(x) :: BOOL(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | BOOL(a) ->   processor cm_tl ((BOOL(a || y) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: BOOL(y) :: s) :: ss_tl) mm
+  | BOOL(a) ->   processor (c::cc_tl) ((BOOL(a || y) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: BOOL(y) :: s) :: ss_tl) mm
 ) 
-| (OR :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((OR :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch (NAME(x)) mm, fetch (NAME(y)) mm) with
-  | (BOOL(a), BOOL(b)) ->   processor cm_tl ((BOOL(a || b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (BOOL(a), BOOL(b)) ->   processor (c::cc_tl) ((BOOL(a || b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (OR :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((OR :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (NOT :: cm_tl, (BOOL(x) :: s) :: ss_tl, _) -> processor cm_tl ((BOOL(not x) :: s) :: ss_tl) mm
-| (NOT :: cm_tl, (NAME(x) :: s) :: ss_tl, _) -> (
+| ((NOT :: c) :: cc_tl, (BOOL(x) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((BOOL(not x) :: s) :: ss_tl) mm
+| ((NOT :: c) :: cc_tl, (NAME(x) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | BOOL(a) -> processor cm_tl ((BOOL(not a) :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: s) :: ss_tl) mm
+  | BOOL(a) -> processor (c::cc_tl) ((BOOL(not a) :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: s) :: ss_tl) mm
 )
-| (NOT :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((NOT :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (EQUAL :: cm_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor cm_tl ((BOOL(x = y) :: s) :: ss_tl) mm
-| (EQUAL :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((EQUAL :: c) :: cc_tl, (INT(x) :: INT(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((BOOL(x = y) :: s) :: ss_tl) mm
+| ((EQUAL :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) -> processor cm_tl ((BOOL(x = b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) -> processor (c::cc_tl) ((BOOL(x = b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (EQUAL :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((EQUAL :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) -> processor cm_tl ((BOOL(a = y) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) -> processor (c::cc_tl) ((BOOL(a = y) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 ) 
-| (EQUAL :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((EQUAL :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch (NAME(x)) mm, fetch (NAME(y)) mm) with
-  | (INT(a), INT(b)) ->   processor cm_tl ((BOOL(a = b) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) ->   processor (c::cc_tl) ((BOOL(a = b) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (EQUAL :: cm_tl, s :: ss_tl, _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((EQUAL :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (LESSTHAN :: cm_tl, (INT(x) :: INT(y) :: s):: ss_tl, _) -> processor cm_tl ((BOOL(y < x) :: s) :: ss_tl) mm
-| (LESSTHAN :: cm_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((LESSTHAN :: c) :: cc_tl, (INT(x) :: INT(y) :: s):: ss_tl, _) -> processor (c::cc_tl) ((BOOL(y < x) :: s) :: ss_tl) mm
+| ((LESSTHAN :: c) :: cc_tl, (INT(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
-  | INT(b) ->  processor cm_tl ((BOOL(b < x) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
+  | INT(b) ->  processor (c::cc_tl) ((BOOL(b < x) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: INT(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (LESSTHAN :: cm_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
+| ((LESSTHAN :: c) :: cc_tl, (NAME(x) :: INT(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
-  | INT(a) ->   processor cm_tl ((BOOL(y < a) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
+  | INT(a) ->   processor (c::cc_tl) ((BOOL(y < a) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: INT(y) :: s) :: ss_tl) mm
 ) 
-| (LESSTHAN :: cm_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
+| ((LESSTHAN :: c) :: cc_tl, (NAME(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match (fetch (NAME(x)) mm, fetch (NAME(y)) mm) with
-  | (INT(a), INT(b)) ->   processor cm_tl ((BOOL(b < a) :: s):: ss_tl) mm
-  | _ -> processor cm_tl ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
+  | (INT(a), INT(b)) ->   processor (c::cc_tl) ((BOOL(b < a) :: s):: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((ERROR :: NAME(x) :: NAME(y) :: s) :: ss_tl) mm
 ) 
-| (LESSTHAN :: cm_tl, s :: ss_tl , _) -> processor cm_tl ((ERROR :: s) :: ss_tl) mm
+| ((LESSTHAN :: c) :: cc_tl, s :: ss_tl , _) -> processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
 
-| (IF :: cm_tl, (x :: y :: BOOL(true) :: s) :: ss_tl, _) -> processor cm_tl ((x :: s) :: ss_tl) mm
-| (IF :: cm_tl, (x :: y :: BOOL(false) :: s) :: ss_tl, _) -> processor cm_tl ((y :: s) :: ss_tl) mm
-| (IF :: cm_tl, (x :: y :: NAME(z) :: s) :: ss_tl, _) -> (
+| ((IF :: c) :: cc_tl, (x :: y :: BOOL(true) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((x :: s) :: ss_tl) mm
+| ((IF :: c) :: cc_tl, (x :: y :: BOOL(false) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((y :: s) :: ss_tl) mm
+| ((IF :: c) :: cc_tl, (x :: y :: NAME(z) :: s) :: ss_tl, _) -> (
   match fetch (NAME(z)) mm with 
-  | BOOL(true) -> processor cm_tl ((x :: s) :: ss_tl) mm
-  | BOOL(false) -> processor cm_tl ((y :: s) :: ss_tl) mm
-  | _ -> processor cm_tl ((x :: y :: NAME(z) :: s) :: ss_tl) mm
+  | BOOL(true) -> processor (c::cc_tl) ((x :: s) :: ss_tl) mm
+  | BOOL(false) -> processor (c::cc_tl) ((y :: s) :: ss_tl) mm
+  | _ -> processor (c::cc_tl) ((x :: y :: NAME(z) :: s) :: ss_tl) mm
 )
-| (IF :: cm_tl, s :: ss_tl , _) -> processor cm_tl ((ERROR :: s) :: ss) mm
+| ((IF :: c) :: cc_tl, s :: ss_tl , _) -> processor (c::cc_tl) ((ERROR :: s) :: ss) mm
 
 | ([], _, _) -> ()
 | _ -> ()
