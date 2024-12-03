@@ -1,14 +1,13 @@
 
 type stackValue = STRING of string | INT of int | BOOL of bool
 | ERROR | NAME of string | UNIT |
-CLOSURE of (stackValue * (command list) * (stackValue*stackValue)list list)
+CLOSURE of (stackValue * command list * (stackValue*stackValue)list list)
 
 and 
 
 command = ADD | SUB | MUL | DIV | REM | NEG | PUSH of stackValue | POP
 | SWAP | ToString | Println | QUIT | CAT | AND | OR | NOT | EQUAL | LESSTHAN
-| BIND | IF | LET | END
-
+| BIND | IF | LET | END | FUN of (string*string) | RETURN | FUNEND | CALL 
 
 
 let interpreter ((input : string), (output : string )) : unit = 
@@ -65,6 +64,26 @@ let push_convert_helper (push_cm : string) =
   
 in
 
+let fun_convert_helpder (fun_cmd : string) : command =
+  
+  let names = String.sub fun_cmd 4 (String.length fun_cmd - 4) in
+  let list_of_names = String.split_on_char ' ' names in
+  
+  let rec iter_with_index list idx =
+    match list with
+    | [] -> failwith "Index out of bounds"
+    | hd :: tl -> if idx = 0 then hd else iter_with_index tl (idx - 1)
+  in
+  FUN (iter_with_index list_of_names 0, iter_with_index list_of_names 1)
+
+in
+
+let cmd_identifier (cmd: string) : command =
+  if String.sub cmd 0 4 = "push" then push_convert_helper cmd
+  else fun_convert_helpder cmd
+
+in
+
 (* Convert the list of string command into command list line by line from string_cmd_list *)
 let rec convert_strCmd_to_svCmd str_cmd_list = 
   match str_cmd_list with
@@ -90,7 +109,10 @@ let rec convert_strCmd_to_svCmd str_cmd_list =
   | "equal" :: tl -> EQUAL :: convert_strCmd_to_svCmd tl
   | "lessThan" :: tl -> LESSTHAN :: convert_strCmd_to_svCmd tl
   | "if" :: tl -> IF :: convert_strCmd_to_svCmd tl
-  | push_cm :: tl -> push_convert_helper push_cm :: convert_strCmd_to_svCmd tl
+  | "funEnd" :: tl -> FUNEND :: convert_strCmd_to_svCmd tl 
+  | "call" :: tl -> CALL :: convert_strCmd_to_svCmd tl
+  | "return" :: tl -> RETURN :: convert_strCmd_to_svCmd tl
+  | cmd :: tl  -> cmd_identifier cmd :: convert_strCmd_to_svCmd tl
 
 in
 
@@ -124,6 +146,14 @@ let rec fetch (name: stackValue) (mm : (stackValue * stackValue) list list) : st
 
 in
 
+let rec command_stacker (cc: command list list) name param p ss mm : unit=
+  match (cc, ss, mm) with
+  | (closure_cmd_list :: ((FUNEND :: c) :: cc_tl), s :: ss_tl, m :: mm_tl) ->
+    p (c :: cc_tl) ((UNIT :: s) :: ss_tl) (((NAME(name),CLOSURE(NAME(param), List. rev closure_cmd_list, mm)) :: m) :: mm_tl)
+  | (closure_cmd_list :: ((cmd :: c) :: cc_tl), ss, mm) -> command_stacker ((cmd :: closure_cmd_list) :: (c :: cc_tl)) name param p ss mm
+  | _ -> ()
+
+in
 let rec processor (cc: command list list) (ss : stackValue list list) (mm : (stackValue * stackValue) list list) : unit =
 match (cc, ss , mm) with
 (* whether int is positive or negative, done through this line *)
@@ -276,17 +306,34 @@ match (cc, ss , mm) with
     processor (c::cc_tl) ((ERROR :: s) :: ss_tl) mm
   
 | ((LET :: c) :: cc_tl, s :: ss_tl, _) -> processor (c::cc_tl) (s :: ss) ([] :: mm)
-(*
-| (LET :: cm_tl, s :: ss_tl, _) -> processor cm_tl (s :: ss) ([] :: mm)*)
+
 | ((END :: c) :: cc_tl, (sv :: s) :: prev_s :: ss_tl, m :: mm_tl) -> processor (c::cc_tl) ((sv :: prev_s) :: ss_tl) mm_tl
-(* when the most top value is variable, return the variable or value?*)
+
+| ((FUN(name, param) :: c) :: cc_tl, _, _) -> command_stacker ([] :: (c :: cc_tl)) name param processor ss mm
+
+(* | ((FUNEND :: c) :: cc_tl, s :: ss_tl, m :: mm_tl) -> () *)
+
+| ((RETURN :: c) :: cc_tl, (sv :: s) :: prev_s :: ss_tl, m :: mm_tl) -> (
+    processor cc_tl ((sv :: prev_s) :: ss_tl) mm_tl
+)
+
+| ((CALL :: c) :: cc_tl, (NAME(arg) :: NAME(func) :: s) :: ss_tl, m :: mm_tl) -> (
+  match (fetch ((NAME(func))) mm, fetch (NAME(arg)) mm)  with
+  | (CLOSURE(p, cmd, env), fetched_arg) -> let new_variable = mm in processor (cmd :: cc) ([] :: ss) (((p, fetched_arg) :: m) :: mm) 
+  | _ -> processor (c :: cc_tl) ((ERROR :: NAME(arg) :: NAME(func) :: s) :: ss_tl) mm)
+
+| ((CALL :: c) :: cc_tl, (arg :: NAME(func) :: s) :: ss_tl, m :: mm_tl) -> (
+  match fetch (NAME(func)) mm with
+  | CLOSURE(p, cmd, env) -> processor (cmd :: cc) ([] :: ss) (((p, arg) :: m) :: env)
+  | _ -> processor (c :: cc_tl) ((ERROR :: arg :: NAME(func) :: s) :: ss_tl) mm
+  )
 
 | ((CAT :: c) :: cc_tl, (STRING(x) :: STRING(y) :: s) :: ss_tl, _) -> processor (c::cc_tl) ((quotation_filter_for_concat y x :: s):: ss_tl) mm
 | ((CAT :: c) :: cc_tl, (STRING(x) :: NAME(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(y)) mm with
   | STRING(b) -> processor (c::cc_tl) ((quotation_filter_for_concat b x :: s):: ss_tl) mm
   | _ -> processor (c::cc_tl) ((ERROR :: STRING(x) :: NAME(y) :: s) :: ss_tl) mm
-) 
+)
 | ((CAT :: c) :: cc_tl, (NAME(x) :: STRING(y) :: s) :: ss_tl, _) -> (
   match fetch (NAME(x)) mm with
   | STRING(a) -> processor (c::cc_tl) ((quotation_filter_for_concat y a :: s):: ss_tl) mm
@@ -389,6 +436,7 @@ match (cc, ss , mm) with
 )
 | ((IF :: c) :: cc_tl, s :: ss_tl , _) -> processor (c::cc_tl) ((ERROR :: s) :: ss) mm
 
+
 | ([], _, _) -> ()
 | _ -> ()
 
@@ -429,3 +477,4 @@ interpreter ("part2input/input15.txt", "part2output/my_output15.txt");; *)
 (* interpreter ("part2input/custom_input2.txt", "part2output/custom_output2.txt");; *)
 (* interpreter ("part2input/input11.txt", "part2output/my_output11.txt");; *)
 (* interpreter ("part2input/custom_input1.txt", "part2output/custom_output1.txt");; *)
+interpreter ("input3/input1.txt", "output3/my_output1.txt");;
